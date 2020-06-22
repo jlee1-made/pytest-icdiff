@@ -276,3 +276,18 @@ def test_larger_numbers_are_sane(testdir):
     )
     output = testdir.runpytest('-vv', '--color=yes').stdout.str()
     assert f"123456   123456{GREEN_ON}7" in output
+
+
+def test_pformat_function(testdir):
+    testdir.makepyfile(
+        f"""
+        def test_one():
+            assert "spam" == "spammy"
+        """,
+        mymodule="""
+        def crazy_pformat(text, *args, **kwargs):
+            return f"[{text}]"
+        """
+    )
+    output = testdir.runpytest('-vv', '--color=yes', '--icdiff-pformat-function=mymodule.crazy_pformat').stdout.str()
+    assert f"[spam]    [spam{GREEN_ON}my" in output

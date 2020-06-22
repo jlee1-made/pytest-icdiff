@@ -1,12 +1,17 @@
 # pylint: disable=inconsistent-return-statements
-import py
-from pprintpp import pformat
+import logging
+
 import icdiff
+import importlib
+import pprintpp
+import py
+
 
 COLS = py.io.TerminalWriter().fullwidth  # pylint: disable=no-member
 MARGIN_L = 10
 GUTTER = 2
 MARGINS = MARGIN_L + GUTTER + 1
+PFORMAT_FUNCTION = None
 
 # def _debug(*things):
 #     with open('/tmp/icdiff-debug.txt', 'a') as f:
@@ -14,9 +19,46 @@ MARGINS = MARGIN_L + GUTTER + 1
 #         f.write('\n')
 
 
+def pytest_addoption(parser):
+    group = parser.getgroup("pytest-icdiff")
+    group.addoption(
+        "--icdiff-pformat-function",
+        action="store",
+        default="pprintpp.pformat",
+        dest="icdiff_pformat_function",
+        help="Fully qualified name of function to format values, e.g. pprintpp.pformat",
+    )
+
+
+def import_a_function(function_qualname, default):
+    module_qualname, sep, function_name = function_qualname.rpartition(".")
+    if module_qualname == "" or sep != "." or function_name == "":
+        logging.warning("Function must be valid fully qualified dotted name "
+                        f"like pprint.pformat: {function_qualname}")
+        return default
+    try:
+        mod = importlib.import_module(module_qualname)
+    except ImportError:
+        logging.warning("Failed to import function, must be valid fully qualified "
+                        f"dotted name like pprint.pformat: {function_qualname}")
+        return default
+    else:
+        func = getattr(mod, function_name, None)
+        if func is None:
+            logging.warning(f"Failed to find function {function_name} in module {mod}")
+            return default
+        return func
+
 def pytest_assertrepr_compare(config, op, left, right):
+    global PFORMAT_FUNCTION
     if op != '==':
         return
+
+    if PFORMAT_FUNCTION is None:
+        PFORMAT_FUNCTION = import_a_function(
+            config.getoption("icdiff_pformat_function"),
+            default=pprintpp.pformat)
+    pformat = PFORMAT_FUNCTION
 
     try:
         if abs(left + right) < 19999:
