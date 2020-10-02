@@ -28,6 +28,14 @@ def pytest_addoption(parser):
         dest="icdiff_pformat_function",
         help="Fully qualified name of function to format values, e.g. pprintpp.pformat",
     )
+    group.addoption(
+        "--icdiff-width",
+        action="store",
+        type=int,
+        default=None,
+        dest="icdiff_width",
+        help="Width to format in",
+    )
 
 
 def import_a_function(function_qualname, default):
@@ -59,6 +67,7 @@ def pytest_assertrepr_compare(config, op, left, right):
             config.getoption("icdiff_pformat_function"),
             default=pprintpp.pformat)
     pformat = PFORMAT_FUNCTION
+    configured_width = config.getoption("icdiff_width")
 
     try:
         if abs(left + right) < 19999:
@@ -81,6 +90,9 @@ def pytest_assertrepr_compare(config, op, left, right):
             diff_cols = max_side * 2 + GUTTER
             pretty_left = pformat(left, indent=2, width=max_side).splitlines()
             pretty_right = pformat(right, indent=2, width=max_side).splitlines()
+
+    if configured_width is not None:
+        diff_cols = configured_width
 
     differ = icdiff.ConsoleDiff(cols=diff_cols, tabsize=2)
 
