@@ -75,7 +75,7 @@ def pytest_assertrepr_compare(config, op, left, right):
     except TypeError:
         pass
 
-    half_cols = COLS / 2 - MARGINS
+    half_cols = int(COLS / 2 - MARGINS)
 
     pretty_left = pformat(left, indent=2, width=half_cols).splitlines()
     pretty_right = pformat(right, indent=2, width=half_cols).splitlines()
